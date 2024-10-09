@@ -22,8 +22,8 @@ def evaluate_first_step_cost(x, y, v, acc, steer, acc0, steer0, x_ref, y_ref, v_
     fine_steer = FINE_STEER_COEF * steer ** 2
     fine_acc = FINE_ACC_COEF * acc ** 2
 
-    fine_steer_dot = FINE_STEER_DOT_COEF * ((steer - steer0) / dt) ** 2
-    fine_acc_dot = FINE_ACC_DOT_COEF * ((acc - acc0) / dt) ** 2
+    fine_steer_dot = FINE_STEER_DOT_COEF * (steer - steer0) ** 2
+    fine_acc_dot = FINE_ACC_DOT_COEF * (acc - acc0) ** 2
 
     # Суммарный вклад для первого шага
     total_cost_first_step = fine_x + fine_y + fine_v + fine_steer + fine_acc + fine_steer_dot + fine_acc_dot
@@ -40,7 +40,7 @@ def evaluate_first_step_cost(x, y, v, acc, steer, acc0, steer0, x_ref, y_ref, v_
         "total_cost_first_step": total_cost_first_step
     }
 
-def update_reference_point(x0, y0, current_idx, x_traj, y_traj, min_distance=2.0):
+def update_reference_point(x0, y0, current_idx, x_traj, y_traj, min_distance=5.0):
     """
     Обновляет индекс референсной точки на траектории, когда автомобиль проходит через текущую точку.
 
@@ -69,20 +69,28 @@ def draw_full_trajectory(carla, world, x_traj, y_traj):
         world.debug.draw_line(start_point, end_point, thickness=0.1, color=carla.Color(0, 255, 0), life_time=dt * 20)
 
 
-def get_eight_trajectory(x_init, y_init):
+def get_eight_trajectory(x_init, y_init, total_points=100):
     # Параметры для восьмерки
     a = 25  # Масштаб восьмерки
     T = 2 * np.pi  # Период для траектории
-    total_points = 100  # Количество точек для расчета полной траектории
 
     # Генерация полной траектории "восьмерки"
     t_values = np.linspace(0, T, total_points)
     x_traj = x_init + a * np.sin(t_values)
     y_traj = y_init + a * np.sin(t_values) * np.cos(t_values)
-    v_ref = [V_REF + 0.1 * np.sin(i * T / total_points) for i in range(total_points)]  # Примерная скорость для каждого шага
 
-    return x_traj, y_traj, v_ref
+    # Примерная скорость для каждого шага
+    v_ref = [V_REF for i in range(total_points)]
 
+    # Поворот траектории на 90 градусов (π/2 радиан) по часовой стрелке
+    cos_angle = np.cos(-np.pi / 4)
+    sin_angle = np.sin(-np.pi / 4)
+
+    # Применение матрицы поворота
+    x_traj_rotated = x_init + cos_angle * (x_traj - x_init) - sin_angle * (y_traj - y_init)
+    y_traj_rotated = y_init + sin_angle * (x_traj - x_init) + cos_angle * (y_traj - y_init)
+
+    return x_traj_rotated, y_traj_rotated, v_ref
 
 def get_ref_trajectory(x_traj, y_traj, current_idx):
     if current_idx + N < len(x_traj):
@@ -98,3 +106,21 @@ def draw_ref_trajectory(carla, world, x_ref, y_ref):
         start_point = carla.Location(x=x_ref[i], y=y_ref[i], z=1.0)
         end_point = carla.Location(x=x_ref[i + 1], y=y_ref[i + 1], z=1.0)
         world.debug.draw_line(start_point, end_point, thickness=0.1, color=carla.Color(255, 0, 0), life_time=dt * 20)
+
+def get_straight_trajectory(x_init, y_init, distance=3000, total_points=1000):
+    """
+    Создает прямую траекторию, направленную на север (вдоль оси Y), начиная с заданной точки (x_init, y_init).
+
+    :param x_init: Начальная координата X
+    :param y_init: Начальная координата Y
+    :param distance: Дистанция по Y, которую нужно пройти
+    :param total_points: Количество точек для расчета траектории
+    :return: Траектория в виде списков x и y, и список референсных скоростей v_ref
+    """
+    x_traj = np.linspace(x_init + 5, x_init + distance, total_points)
+    y_traj = np.full(total_points, y_init + 3)
+
+    # Примерная скорость для каждого шага
+    v_ref = [V_REF for _ in range(total_points)]
+
+    return x_traj, y_traj, v_ref

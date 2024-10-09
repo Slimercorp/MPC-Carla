@@ -3,9 +3,9 @@ import time
 import numpy as np
 import matplotlib.pyplot as plt
 
-from src.config import MAX_BRAKING_M_S_2, MAX_ACCELERATION_M_S_2, MAX_WHEEL_ANGLE_RAD, dt
+from src.config import MAX_BRAKING_M_S_2, MAX_ACCELERATION_M_S_2, MAX_WHEEL_ANGLE_RAD, dt, V_REF
 from src.help_functions import update_reference_point, draw_full_trajectory, draw_ref_trajectory, get_eight_trajectory, \
-    get_ref_trajectory
+    get_ref_trajectory, get_straight_trajectory
 from src.mpc_controller import mpc_controller
 
 # Переменные для хранения данных для графиков
@@ -35,7 +35,7 @@ for vehicle in world.get_actors().filter('*vehicle*'):
 # Спауним автомобиль
 vehicle_bp = blueprint_library.filter('vehicle.tesla.model3')[0]
 spawn_location = carla.Location(x=210, y=362, z=0.1)  # Указываем точные координаты
-spawn_rotation = carla.Rotation(pitch=0, yaw=50, roll=0)  # Указываем ориентацию (yaw - это угол поворота по вертикали)
+spawn_rotation = carla.Rotation(pitch=0, yaw=0, roll=0)  # Указываем ориентацию (yaw - это угол поворота по вертикали)
 
 # Создаем объект трансформации
 spawn_transform = carla.Transform(location=spawn_location, rotation=spawn_rotation)
@@ -60,6 +60,8 @@ wheel_angle_rad = 0
 
 try:
     while True:
+        start_time = time.time()
+
         draw_full_trajectory(carla, world, x_traj, y_traj)
 
         # Получаем текущее положение автомобиля
@@ -79,7 +81,7 @@ try:
         v_data.append(v0)
         x_ref_data.append(x_ref[0])
         y_ref_data.append(y_ref[0])
-        v_ref_data.append(v_ref[0])
+        v_ref_data.append(V_REF)
 
         # Передаем референсную траекторию в контроллер
         acceleration_m_s_2, wheel_angle_rad = mpc_controller(x0, y0, theta0, v0, acceleration_m_s_2, wheel_angle_rad, x_ref, y_ref, v_ref)
@@ -95,7 +97,7 @@ try:
             throttle = acceleration_m_s_2 / MAX_ACCELERATION_M_S_2
             brake = 0
         steer = wheel_angle_rad / MAX_WHEEL_ANGLE_RAD
-        print(f"throttle = {throttle:.2f}, brake = {brake:.2f}  steer = {steer:.2f} \n")
+        print(f"throttle = {throttle:.2f}, brake = {brake:.2f}  steer = {steer:.2f}")
 
         # Сохраняем управление для графиков
         steering_data.append(steer)
@@ -104,7 +106,16 @@ try:
         ego_vehicle.apply_control(carla.VehicleControl(throttle=throttle, steer=steer, brake=brake))
 
         current_idx = update_reference_point(x0, y0, current_idx, x_traj, y_traj)
-        time.sleep(dt)
+        print(f"current_idx = {current_idx}\n")
+        end_time = time.time()
+
+        mpc_calculation_time = end_time - start_time
+        print(f"Время расчета управления MPC: {mpc_calculation_time:.6f} секунд")
+        if mpc_calculation_time > dt:
+            print(f"Внимание! Контроллер MPC не успевает рассчитать управление за {dt} секунд.")
+            raise Exception
+
+        time.sleep(dt - mpc_calculation_time)
 
 finally:
     ego_vehicle.destroy()
@@ -128,11 +139,12 @@ finally:
     # Соответственно обрезаем time_axis
     time_axis = np.linspace(0, min_length * dt, min_length)
 
-    # Построение графиков после завершения симуляции
     # График для x и x_ref
     plt.figure()
     plt.plot(time_axis, x_data, label='x (car)')
     plt.plot(time_axis, x_ref_data, label='x_ref (reference)', linestyle='--')
+    plt.scatter(time_axis, x_data, color='blue', s=10)  # Добавляем точки измерений для x
+    plt.scatter(time_axis, x_ref_data, color='red', s=10)  # Добавляем точки измерений для x_ref
     plt.xlabel('Time (s)')
     plt.ylabel('x position (m)')
     plt.legend()
@@ -142,6 +154,8 @@ finally:
     plt.figure()
     plt.plot(time_axis, y_data, label='y (car)')
     plt.plot(time_axis, y_ref_data, label='y_ref (reference)', linestyle='--')
+    plt.scatter(time_axis, y_data, color='blue', s=10)  # Добавляем точки измерений для y
+    plt.scatter(time_axis, y_ref_data, color='red', s=10)  # Добавляем точки измерений для y_ref
     plt.xlabel('Time (s)')
     plt.ylabel('y position (m)')
     plt.legend()
@@ -151,6 +165,8 @@ finally:
     plt.figure()
     plt.plot(time_axis, v_data, label='v (car)')
     plt.plot(time_axis, v_ref_data, label='v_ref (reference)', linestyle='--')
+    plt.scatter(time_axis, v_data, color='blue', s=10)  # Добавляем точки измерений для v
+    plt.scatter(time_axis, v_ref_data, color='red', s=10)  # Добавляем точки измерений для v_ref
     plt.xlabel('Time (s)')
     plt.ylabel('Speed (m/s)')
     plt.legend()
@@ -159,6 +175,7 @@ finally:
     # График для управления рулем
     plt.figure()
     plt.plot(time_axis, steering_data, label='Steering Control')
+    plt.scatter(time_axis, steering_data, color='blue', s=10)  # Добавляем точки измерений для управления рулем
     plt.xlabel('Time (s)')
     plt.ylabel('Steering angle (normalized)')
     plt.legend()
@@ -168,9 +185,12 @@ finally:
     plt.figure()
     plt.plot(time_axis, throttle_data, label='Throttle Control')
     plt.plot(time_axis, brake_data, label='Brake Control', linestyle='--')
+    plt.scatter(time_axis, throttle_data, color='blue', s=10)  # Добавляем точки измерений для газа
+    plt.scatter(time_axis, brake_data, color='red', s=10)  # Добавляем точки измерений для тормоза
     plt.xlabel('Time (s)')
     plt.ylabel('Throttle/Brake (normalized)')
     plt.legend()
     plt.title('Throttle Control and Brake Control vs Time')
 
     plt.show()  # Показ всех графиков
+

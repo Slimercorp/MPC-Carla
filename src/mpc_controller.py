@@ -38,8 +38,8 @@ def mpc_controller(x0, y0, theta0, v0, acc0, steer0, x_ref, y_ref, v_ref):
         fine_steer_dot = 0
         fine_acc_dot = 0
         if k > 0:
-            fine_steer_dot += FINE_STEER_DOT_COEF * ((U[0, k] - U[0, k - 1]) / dt) ** 2
-            fine_acc_dot += FINE_ACC_DOT_COEF * ((U[1, k] - U[1, k - 1]) / dt) ** 2
+            fine_steer_dot += FINE_STEER_DOT_COEF * (U[0, k] - U[0, k - 1]) ** 2
+            fine_acc_dot += FINE_ACC_DOT_COEF * (U[1, k] - U[1, k - 1]) ** 2
 
         cost += fine_x + fine_y + fine_v + fine_steer + fine_acc + fine_steer_dot + fine_acc_dot
 
