@@ -1,0 +1,4 @@
+numpy==1.23.5
+casadi==3.5.5
+matplotlib==3.6.2
+carla==0.9.1

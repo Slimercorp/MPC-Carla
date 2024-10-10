@@ -1,6 +1,7 @@
 import casadi as ca
 
-L = 2.875  # Длина колесной базы автомобиля (метры)
+from src.config import L
+
 def vehicle_model(x, u, dt):
     x_pos = x[0]
     y_pos = x[1]

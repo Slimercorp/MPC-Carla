@@ -8,6 +8,7 @@ LAPS = 1 #Laps of simulation
 MAX_ACCELERATION_M_S_2 = 10 # Vehicle characteristics (from CARLA simulator, see get_physics_control())
 MAX_BRAKING_M_S_2 = -4.1 # Vehicle characteristics (from CARLA simulator, see get_physics_control())
 MAX_WHEEL_ANGLE_RAD = 70 / 180 * np.pi # Vehicle characteristics (from CARLA simulator, see get_physics_control())
+L = 2.875  #The wheelbase length of the vehicle (meters)
 
 ### MPC settings
 N = 5 # Horizon of planning for MPC controller
