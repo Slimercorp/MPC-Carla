@@ -32,7 +32,6 @@ class CarlaSimulator:
         spectator.set_transform(spectator_transform)
 
     def clean(self):
-        self.ego_vehicle.destroy()
         for vehicle in self.world.get_actors().filter('*vehicle*'):
             vehicle.destroy()
 
