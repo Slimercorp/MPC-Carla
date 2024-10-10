@@ -77,7 +77,7 @@ def draw_full_trajectory(carla, world, x_traj, y_traj):
     for i in range(len(x_traj) - 1):
         start_point = carla.Location(x=x_traj[i], y=y_traj[i], z=0.2)
         end_point = carla.Location(x=x_traj[i + 1], y=y_traj[i + 1], z=0.2)
-        world.debug.draw_line(start_point, end_point, thickness=0.1, color=carla.Color(0, 255, 0), life_time=dt * 20)
+        world.debug.draw_line(start_point, end_point, thickness=0.1, color=carla.Color(0, 255, 0), life_time=dt * 2)
 
 
 def get_eight_trajectory(x_init, y_init, total_points=100):
@@ -129,7 +129,7 @@ def draw_ref_trajectory(carla, world, x_ref, y_ref):
     for i in range(N - 1):
         start_point = carla.Location(x=x_ref[i], y=y_ref[i], z=1.0)
         end_point = carla.Location(x=x_ref[i + 1], y=y_ref[i + 1], z=1.0)
-        world.debug.draw_line(start_point, end_point, thickness=0.1, color=carla.Color(255, 0, 0), life_time=dt * 20)
+        world.debug.draw_line(start_point, end_point, thickness=0.1, color=carla.Color(255, 0, 0), life_time=dt * 2)
 
 def get_straight_trajectory(x_init, y_init, distance=3000, total_points=1000):
     """
@@ -151,8 +151,9 @@ def get_straight_trajectory(x_init, y_init, distance=3000, total_points=1000):
 
 # Функция для расчета поперечного отклонения от траектории
 def calculate_lateral_deviation(x, y, x_ref1, y_ref1, x_ref2, y_ref2):
-    # Формула для расчета поперечного отклонения
-    # Расстояние от точки (x, y) до линии, образованной точками (x_ref1, y_ref1) и (x_ref2, y_ref2)
     num = (y_ref2 - y_ref1) * x - (x_ref2 - x_ref1) * y + x_ref2 * y_ref1 - y_ref2 * x_ref1
     denom = ca.sqrt((y_ref2 - y_ref1) ** 2 + (x_ref2 - x_ref1) ** 2)
-    return num / denom
+    if denom > 0.01:
+        return num / denom
+    else:
+        return 0

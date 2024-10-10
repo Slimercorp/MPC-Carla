@@ -156,15 +156,17 @@ finally:
         vehicle.destroy()
 
     # Находим минимальный размер среди всех массивов данных
-    min_length = min(len(x_data), len(y_data), len(v_data), len(x_ref_data), len(y_ref_data), len(v_ref_data), len(steering_data), len(throttle_data), len(brake_data))
+    min_length = min(len(x_data), len(y_data), len(v_data), len(theta_data), len(x_ref_data), len(y_ref_data), len(v_ref_data), len(theta_ref_data), len(steering_data), len(throttle_data), len(brake_data))
 
     # Обрезаем все массивы до минимального размера
     x_data = x_data[:min_length]
     y_data = y_data[:min_length]
     v_data = v_data[:min_length]
+    theta_data = theta_data[:min_length]
     x_ref_data = x_ref_data[:min_length]
     y_ref_data = y_ref_data[:min_length]
     v_ref_data = v_ref_data[:min_length]
+    theta_ref_data = theta_ref_data[:min_length]
     steering_data = steering_data[:min_length]
     throttle_data = throttle_data[:min_length]
     brake_data = brake_data[:min_length]

@@ -7,8 +7,8 @@ def vehicle_model(x, u, dt):
     theta = x[2]
     v = x[3]
 
-    delta = u[0]  # Steering angle (управление рулем)
-    a = u[1]  # Acceleration (управление дросселем)
+    delta = u[0]
+    a = u[1]
 
     x_pos_next = x_pos + v * ca.cos(theta) * dt
     y_pos_next = y_pos + v * ca.sin(theta) * dt

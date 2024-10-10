@@ -1,9 +1,9 @@
 import casadi as ca
 
-from src.help_functions import evaluate_first_step_cost
+from src.help_functions import evaluate_first_step_cost, calculate_lateral_deviation
 from src.config import MAX_CONTROL_WHEEL_ANGLE_RAD, MAX_CONTROL_ACCELERATION_M_S_2, MAX_CONTROL_BRAKING_M_S_2, \
     PATH_TOLERANCE_M, FINE_X_COEF, FINE_Y_COEF, FINE_V_COEF, FINE_STEER_COEF, FINE_ACC_COEF, FINE_STEER_DOT_COEF, \
-    FINE_ACC_DOT_COEF, N, dt, FINE_THETA_COEF
+    FINE_ACC_DOT_COEF, N, dt, FINE_THETA_COEF, FINE_LATERAL_COEF
 from src.vehicle_model import vehicle_model
 
 # Основная функция MPC контроллера
@@ -38,13 +38,22 @@ def mpc_controller(x0, y0, theta0, v0, acc0, steer0, x_ref, y_ref, v_ref, theta_
 
         fine_theta = FINE_THETA_COEF * (X[2, k] - theta_ref[k]) ** 2
 
+        if k < N - 1:
+            lateral_deviation = calculate_lateral_deviation(X[0, k], X[1, k], x_ref[k], y_ref[k], x_ref[k + 1], y_ref[k + 1])
+        else:
+            lateral_deviation = 0
+
+        fine_lateral = FINE_LATERAL_COEF * lateral_deviation ** 2
+
+        # Добавление штрафов за резкие изменения управления
         fine_steer_dot = 0
         fine_acc_dot = 0
         if k > 0:
             fine_steer_dot += FINE_STEER_DOT_COEF * (U[0, k] - U[0, k - 1]) ** 2
             fine_acc_dot += FINE_ACC_DOT_COEF * (U[1, k] - U[1, k - 1]) ** 2
 
-        cost += fine_x + fine_y + fine_v + fine_steer  + fine_acc + fine_steer_dot + fine_acc_dot + fine_theta
+        # Суммарная стоимость
+        cost += fine_x + fine_y + fine_v + fine_steer + fine_acc + fine_steer_dot + fine_acc_dot + fine_theta + fine_lateral
 
     opti.minimize(cost)
 
@@ -52,7 +61,7 @@ def mpc_controller(x0, y0, theta0, v0, acc0, steer0, x_ref, y_ref, v_ref, theta_
     opts = {
         'ipopt.print_level': 0,
         'print_time': 0,
-        'ipopt.max_cpu_time': dt/2  # Ограничение времени решения в секундах (dt)
+        'ipopt.max_cpu_time': dt  # Ограничение времени решения в секундах (dt)
     }
     opti.solver('ipopt', opts)
 
@@ -75,6 +84,7 @@ def mpc_controller(x0, y0, theta0, v0, acc0, steer0, x_ref, y_ref, v_ref, theta_
     print(f"  Steering control dot cost: {first_step_cost['fine_steer_dot']:.4f}")
     print(f"  Acceleration control dot cost: {first_step_cost['fine_acc_dot']:.4f}")
     print(f"  Theta cost: {first_step_cost['fine_theta']:.4f}")
+    print(f"  Lateral deviation cost: {first_step_cost['fine_lateral']:.4f}")
     print(f"  Total cost for first step: {first_step_cost['total_cost_first_step']:.4f}")
     print(f"Optimized total cost (final cost after optimization): {optimized_cost:.4f}")
 
