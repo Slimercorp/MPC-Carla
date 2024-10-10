@@ -65,3 +65,41 @@ class CarlaSimulator:
             brake = 0
         steer = wheel_angle_rad / MAX_WHEEL_ANGLE_RAD
         return throttle, brake, steer
+
+    def print_vehicle_physics(self):
+        if not self.ego_vehicle:
+            print("Vehicle not spawned yet!")
+            return None
+
+        physics_control = self.ego_vehicle.get_physics_control()
+
+        print("Vehicle Physics Information.\n")
+
+        print("Wheel Information:")
+        for i, wheel in enumerate(physics_control.wheels):
+            print(f" Wheel {i + 1}:")
+            print(f"   Tire Friction: {wheel.tire_friction}")
+            print(f"   Damping Rate: {wheel.damping_rate}")
+            print(f"   Max Steer Angle: {wheel.max_steer_angle}")
+            print(f"   Radius: {wheel.radius}")
+            print(f"   Max Brake Torque: {wheel.max_brake_torque}")
+            print(f"   Max Handbrake Torque: {wheel.max_handbrake_torque}")
+            print(f"   Position (x, y, z): ({wheel.position.x}, {wheel.position.y}, {wheel.position.z})")
+
+        print(f" Torque Curve:")
+        for point in physics_control.torque_curve:
+            print(f"RPM: {point.x}, Torque: {point.y}")
+        print(f" Max RPM: {physics_control.max_rpm}")
+        print(f" MOI (Moment of Inertia): {physics_control.moi}")
+        print(f" Damping Rate Full Throttle: {physics_control.damping_rate_full_throttle}")
+        print(f" Damping Rate Zero Throttle Clutch Engaged: {physics_control.damping_rate_zero_throttle_clutch_engaged}")
+        print(f" Damping Rate Zero Throttle Clutch Disengaged: {physics_control.damping_rate_zero_throttle_clutch_disengaged}")
+        print(f" If True, the vehicle will have an automatic transmission: {physics_control.use_gear_autobox}")
+        print(f" Gear Switch Time: {physics_control.gear_switch_time}")
+        print(f" Clutch Strength: {physics_control.clutch_strength}")
+        print(f" Final Ratio: {physics_control.final_ratio}")
+        print(f" Mass: {physics_control.mass}")
+        print(f" Drag coefficient: {physics_control.drag_coefficient}")
+        print(f" Steering Curve:")
+        for point in physics_control.steering_curve:
+            print(f"Speed: {point.x}, Steering: {point.y}")

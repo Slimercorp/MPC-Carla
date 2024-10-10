@@ -9,6 +9,7 @@ from src.mpc_controller import MpcController
 carla = CarlaSimulator()
 carla.load_world('Town02_Opt')
 carla.spawn_vehicle('vehicle.tesla.model3', x=X_INIT_M, y=Y_INIT_M, z=0.1)
+carla.print_vehicle_physics()
 carla.set_spectator(X_INIT_M, Y_INIT_M, z=50, pitch=-90)
 
 logger = Logger()
