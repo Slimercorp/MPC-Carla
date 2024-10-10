@@ -1,9 +1,10 @@
 import numpy as np
+
 from src.config import FINE_X_COEF, FINE_Y_COEF, FINE_V_COEF, FINE_STEER_COEF, FINE_ACC_COEF, \
-    FINE_STEER_DOT_COEF, FINE_ACC_DOT_COEF, N, dt, V_REF
+    FINE_STEER_DOT_COEF, FINE_ACC_DOT_COEF, N, dt, V_REF, FINE_THETA_COEF
 
 
-def evaluate_first_step_cost(x, y, v, acc, steer, acc0, steer0, x_ref, y_ref, v_ref, PATH_TOLERANCE_M):
+def evaluate_first_step_cost(x, y, v, theta, acc, steer, acc0, steer0, x_ref, y_ref, v_ref, theta_ref, PATH_TOLERANCE_M):
     """Оценивает вклад в cost для первого шага управления (k=0)"""
 
     # Оценка отклонения по x для первого шага
@@ -19,6 +20,8 @@ def evaluate_first_step_cost(x, y, v, acc, steer, acc0, steer0, x_ref, y_ref, v_
 
     fine_v = FINE_V_COEF * (v - v_ref[0]) ** 2
 
+    fine_theta = FINE_THETA_COEF * (theta - theta_ref[0]) ** 2
+
     fine_steer = FINE_STEER_COEF * steer ** 2
     fine_acc = FINE_ACC_COEF * acc ** 2
 
@@ -26,7 +29,7 @@ def evaluate_first_step_cost(x, y, v, acc, steer, acc0, steer0, x_ref, y_ref, v_
     fine_acc_dot = FINE_ACC_DOT_COEF * (acc - acc0) ** 2
 
     # Суммарный вклад для первого шага
-    total_cost_first_step = fine_x + fine_y + fine_v + fine_steer + fine_acc + fine_steer_dot + fine_acc_dot
+    total_cost_first_step = fine_x + fine_y + fine_v + fine_steer + fine_acc + fine_steer_dot + fine_acc_dot + fine_theta
 
     # Возвращаем результат по частям для анализа
     return {
@@ -37,6 +40,7 @@ def evaluate_first_step_cost(x, y, v, acc, steer, acc0, steer0, x_ref, y_ref, v_
         "fine_acc": fine_acc,
         "fine_steer_dot": fine_steer_dot,
         "fine_acc_dot": fine_acc_dot,
+        "fine_theta": fine_theta,
         "total_cost_first_step": total_cost_first_step
     }
 
@@ -80,7 +84,7 @@ def get_eight_trajectory(x_init, y_init, total_points=100):
     y_traj = y_init + a * np.sin(t_values) * np.cos(t_values)
 
     # Примерная скорость для каждого шага
-    v_ref = [V_REF for i in range(total_points)]
+    v_ref = [V_REF for _ in range(total_points)]
 
     # Поворот траектории на 90 градусов (π/2 радиан) по часовой стрелке
     cos_angle = np.cos(-np.pi / 4)
@@ -90,16 +94,29 @@ def get_eight_trajectory(x_init, y_init, total_points=100):
     x_traj_rotated = x_init + cos_angle * (x_traj - x_init) - sin_angle * (y_traj - y_init)
     y_traj_rotated = y_init + sin_angle * (x_traj - x_init) + cos_angle * (y_traj - y_init)
 
-    return x_traj_rotated, y_traj_rotated, v_ref
+    # Вычисляем угол направления движения для каждой точки траектории
+    theta_ref = []
+    for i in range(total_points - 1):
+        dx = x_traj_rotated[i + 1] - x_traj_rotated[i]
+        dy = y_traj_rotated[i + 1] - y_traj_rotated[i]
+        theta = np.arctan2(dy, dx)  # Направление движения (угол ориентации)
+        theta_ref.append(theta)
 
-def get_ref_trajectory(x_traj, y_traj, current_idx):
+    # Для последней точки можем использовать угол направления последней секции
+    theta_ref.append(theta_ref[-1])
+
+    return x_traj_rotated, y_traj_rotated, v_ref, theta_ref
+
+def get_ref_trajectory(x_traj, y_traj, theta_traj, current_idx):
     if current_idx + N < len(x_traj):
         x_ref = x_traj[current_idx:current_idx + N]
         y_ref = y_traj[current_idx:current_idx + N]
+        theta_ref = theta_traj[current_idx:current_idx + N]
     else:
         x_ref = np.concatenate((x_traj[current_idx:], x_traj[:N - (len(x_traj) - current_idx)]))
         y_ref = np.concatenate((y_traj[current_idx:], y_traj[:N - (len(x_traj) - current_idx)]))
-    return x_ref, y_ref
+        theta_ref = np.concatenate((theta_traj[current_idx:], theta_traj[:N - (len(x_traj) - current_idx)]))
+    return x_ref, y_ref, theta_ref
 
 def draw_ref_trajectory(carla, world, x_ref, y_ref):
     for i in range(N - 1):

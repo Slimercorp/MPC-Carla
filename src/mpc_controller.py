@@ -3,11 +3,11 @@ import casadi as ca
 from src.help_functions import evaluate_first_step_cost
 from src.config import MAX_CONTROL_WHEEL_ANGLE_RAD, MAX_CONTROL_ACCELERATION_M_S_2, MAX_CONTROL_BRAKING_M_S_2, \
     PATH_TOLERANCE_M, FINE_X_COEF, FINE_Y_COEF, FINE_V_COEF, FINE_STEER_COEF, FINE_ACC_COEF, FINE_STEER_DOT_COEF, \
-    FINE_ACC_DOT_COEF, N, dt
+    FINE_ACC_DOT_COEF, N, dt, FINE_THETA_COEF
 from src.vehicle_model import vehicle_model
 
 # Основная функция MPC контроллера
-def mpc_controller(x0, y0, theta0, v0, acc0, steer0, x_ref, y_ref, v_ref):
+def mpc_controller(x0, y0, theta0, v0, acc0, steer0, x_ref, y_ref, v_ref, theta_ref):
     # Определение переменных оптимизации
     opti = ca.Opti()  # CasADi optimization environment
 
@@ -35,18 +35,25 @@ def mpc_controller(x0, y0, theta0, v0, acc0, steer0, x_ref, y_ref, v_ref):
         fine_v = FINE_V_COEF * (X[3, k] - v_ref[k]) ** 2
         fine_steer = FINE_STEER_COEF * U[0, k] ** 2
         fine_acc = FINE_ACC_COEF * U[1, k] ** 2
+
+        fine_theta = FINE_THETA_COEF * (X[2, k] - theta_ref[k]) ** 2
+
         fine_steer_dot = 0
         fine_acc_dot = 0
         if k > 0:
             fine_steer_dot += FINE_STEER_DOT_COEF * (U[0, k] - U[0, k - 1]) ** 2
             fine_acc_dot += FINE_ACC_DOT_COEF * (U[1, k] - U[1, k - 1]) ** 2
 
-        cost += fine_x + fine_y + fine_v + fine_steer + fine_acc + fine_steer_dot + fine_acc_dot
+        cost += fine_x + fine_y + fine_v + fine_steer  + fine_acc + fine_steer_dot + fine_acc_dot + fine_theta
 
     opti.minimize(cost)
 
-    # Решение оптимизационной задачи
-    opts = {'ipopt.print_level': 0, 'print_time': 0}
+    # Решение оптимизационной задачи с ограничением по времени
+    opts = {
+        'ipopt.print_level': 0,
+        'print_time': 0,
+        'ipopt.max_cpu_time': dt/2  # Ограничение времени решения в секундах (dt)
+    }
     opti.solver('ipopt', opts)
 
     sol = opti.solve()
@@ -57,7 +64,7 @@ def mpc_controller(x0, y0, theta0, v0, acc0, steer0, x_ref, y_ref, v_ref):
     acceleration_m_s_2 = sol.value(U[1, 0])
 
     # В конце контроллера вызываем эту функцию для первого шага
-    first_step_cost = evaluate_first_step_cost(x0, y0, v0, acceleration_m_s_2, wheel_angle_rad, acc0, steer0, x_ref, y_ref, v_ref, PATH_TOLERANCE_M)
+    first_step_cost = evaluate_first_step_cost(x0, y0, v0, theta0, acceleration_m_s_2, wheel_angle_rad, acc0, steer0, x_ref, y_ref, v_ref, theta_ref, PATH_TOLERANCE_M)
 
     print(f"First step cost breakdown:")
     print(f"  Deviation X cost: {first_step_cost['fine_x']:.4f}")
@@ -67,6 +74,7 @@ def mpc_controller(x0, y0, theta0, v0, acc0, steer0, x_ref, y_ref, v_ref):
     print(f"  Acceleration control cost: {first_step_cost['fine_acc']:.4f}")
     print(f"  Steering control dot cost: {first_step_cost['fine_steer_dot']:.4f}")
     print(f"  Acceleration control dot cost: {first_step_cost['fine_acc_dot']:.4f}")
+    print(f"  Theta cost: {first_step_cost['fine_theta']:.4f}")
     print(f"  Total cost for first step: {first_step_cost['total_cost_first_step']:.4f}")
     print(f"Optimized total cost (final cost after optimization): {optimized_cost:.4f}")
 
