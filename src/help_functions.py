@@ -1,7 +1,8 @@
 import numpy as np
+import casadi as ca
 
 from src.config import FINE_X_COEF, FINE_Y_COEF, FINE_V_COEF, FINE_STEER_COEF, FINE_ACC_COEF, \
-    FINE_STEER_DOT_COEF, FINE_ACC_DOT_COEF, N, dt, V_REF, FINE_THETA_COEF
+    FINE_STEER_DOT_COEF, FINE_ACC_DOT_COEF, N, dt, V_REF, FINE_THETA_COEF, FINE_LATERAL_COEF
 
 
 def evaluate_first_step_cost(x, y, v, theta, acc, steer, acc0, steer0, x_ref, y_ref, v_ref, theta_ref, PATH_TOLERANCE_M):
@@ -18,6 +19,11 @@ def evaluate_first_step_cost(x, y, v, theta, acc, steer, acc0, steer0, x_ref, y_
     else:
         fine_y = 0
 
+    # Рассчет поперечного отклонения (между ближайшими двумя точками траектории)
+    lateral_deviation = calculate_lateral_deviation(x, y, x_ref[0], y_ref[0], x_ref[1], y_ref[1])
+
+    fine_lateral = FINE_LATERAL_COEF * lateral_deviation ** 2
+
     fine_v = FINE_V_COEF * (v - v_ref[0]) ** 2
 
     fine_theta = FINE_THETA_COEF * (theta - theta_ref[0]) ** 2
@@ -29,7 +35,7 @@ def evaluate_first_step_cost(x, y, v, theta, acc, steer, acc0, steer0, x_ref, y_
     fine_acc_dot = FINE_ACC_DOT_COEF * (acc - acc0) ** 2
 
     # Суммарный вклад для первого шага
-    total_cost_first_step = fine_x + fine_y + fine_v + fine_steer + fine_acc + fine_steer_dot + fine_acc_dot + fine_theta
+    total_cost_first_step = fine_x + fine_y + fine_v + fine_steer + fine_acc + fine_steer_dot + fine_acc_dot + fine_theta + fine_lateral
 
     # Возвращаем результат по частям для анализа
     return {
@@ -41,6 +47,7 @@ def evaluate_first_step_cost(x, y, v, theta, acc, steer, acc0, steer0, x_ref, y_
         "fine_steer_dot": fine_steer_dot,
         "fine_acc_dot": fine_acc_dot,
         "fine_theta": fine_theta,
+        "fine_lateral": fine_lateral,
         "total_cost_first_step": total_cost_first_step
     }
 
@@ -141,3 +148,11 @@ def get_straight_trajectory(x_init, y_init, distance=3000, total_points=1000):
     v_ref = [V_REF for _ in range(total_points)]
 
     return x_traj, y_traj, v_ref
+
+# Функция для расчета поперечного отклонения от траектории
+def calculate_lateral_deviation(x, y, x_ref1, y_ref1, x_ref2, y_ref2):
+    # Формула для расчета поперечного отклонения
+    # Расстояние от точки (x, y) до линии, образованной точками (x_ref1, y_ref1) и (x_ref2, y_ref2)
+    num = (y_ref2 - y_ref1) * x - (x_ref2 - x_ref1) * y + x_ref2 * y_ref1 - y_ref2 * x_ref1
+    denom = ca.sqrt((y_ref2 - y_ref1) ** 2 + (x_ref2 - x_ref1) ** 2)
+    return num / denom
