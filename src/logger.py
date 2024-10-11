@@ -18,7 +18,7 @@ class Logger:
         self.throttle_data = []
         self.brake_data = []
 
-    def log_control_input(self, x, y, v, theta, x_ref, y_ref, v_ref, theta_ref):
+    def log_controller_input(self, x, y, v, theta, x_ref, y_ref, v_ref, theta_ref):
         self.x_data.append(x)
         self.y_data.append(y)
         self.v_data.append(v)
@@ -28,7 +28,7 @@ class Logger:
         self.v_ref_data.append(v_ref)
         self.theta_ref_data.append(theta_ref * 180 / np.pi)
 
-    def log_control_output(self, steering, throttle, brake):
+    def log_controller_output(self, steering, throttle, brake):
         self.steering_data.append(steering)
         self.throttle_data.append(throttle)
         self.brake_data.append(brake)

@@ -16,7 +16,7 @@ class CarlaSimulator:
     def load_world(self, map_name):
         self.client.load_world(map_name)
 
-    def spawn_vehicle(self, vehicle_name, x=0, y=0, z=0, pitch=0, yaw=0, roll=0):
+    def spawn_ego_vehicle(self, vehicle_name, x=0, y=0, z=0, pitch=0, yaw=0, roll=0):
         blueprint_library = self.world.get_blueprint_library()
         vehicle_bp = blueprint_library.filter(vehicle_name)[0]
         spawn_location = carla.Location(x, y, z)
@@ -41,7 +41,7 @@ class CarlaSimulator:
             end_point = carla.Location(x=x_traj[i + 1], y=y_traj[i + 1], z=height)
             self.world.debug.draw_line(start_point, end_point, thickness=thickness, color=carla.Color(red, green, blue), life_time=life_time)
 
-    def get_main_vehicle_state(self):
+    def get_main_ego_vehicle_state(self):
         transform = self.ego_vehicle.get_transform()
         x = transform.location.x
         y = transform.location.y
@@ -66,7 +66,7 @@ class CarlaSimulator:
         steer = wheel_angle_rad / MAX_WHEEL_ANGLE_RAD
         return throttle, brake, steer
 
-    def print_vehicle_physics(self):
+    def print_ego_vehicle_characteristics(self):
         if not self.ego_vehicle:
             print("Vehicle not spawned yet!")
             return None

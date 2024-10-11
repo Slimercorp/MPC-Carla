@@ -8,8 +8,8 @@ from src.mpc_controller import MpcController
 
 carla = CarlaSimulator()
 carla.load_world('Town02_Opt')
-carla.spawn_vehicle('vehicle.tesla.model3', x=X_INIT_M, y=Y_INIT_M, z=0.1)
-carla.print_vehicle_physics()
+carla.spawn_ego_vehicle('vehicle.tesla.model3', x=X_INIT_M, y=Y_INIT_M, z=0.1)
+carla.print_ego_vehicle_characteristics()
 carla.set_spectator(X_INIT_M, Y_INIT_M, z=50, pitch=-90)
 
 logger = Logger()
@@ -27,13 +27,13 @@ try:
 
         carla.draw_trajectory(x_traj, y_traj, height = 0.2, green = 255, life_time = dt * 2)
 
-        x0, y0, theta0, v0 = carla.get_main_vehicle_state()
+        x0, y0, theta0, v0 = carla.get_main_ego_vehicle_state()
         mpc_controller.set_init_vehicle_state(x0, y0, theta0, v0)
 
         x_ref, y_ref, theta_ref = get_ref_trajectory(x_traj, y_traj, theta_traj, current_idx)
         carla.draw_trajectory(x_ref, y_ref, height = 1.0, red = 255, life_time = dt * 2)
 
-        logger.log_control_input(x0, y0, v0, theta0, x_ref[0], y_ref[0], V_REF, theta_ref[0])
+        logger.log_controller_input(x0, y0, v0, theta0, x_ref[0], y_ref[0], V_REF, theta_ref[0])
         mpc_controller.update_cost_function(x_ref, y_ref, theta_ref, v_ref)
 
         mpc_controller.solve()
@@ -41,7 +41,7 @@ try:
         wheel_angle_rad, acceleration_m_s_2 = mpc_controller.get_controls_value()
 
         throttle, brake, steer = CarlaSimulator.process_control_inputs(wheel_angle_rad, acceleration_m_s_2)
-        logger.log_control_output(steer, throttle, brake)
+        logger.log_controller_output(steer, throttle, brake)
         carla.apply_control(steer, throttle, brake)
 
         prev_current_idx = current_idx

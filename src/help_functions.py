@@ -1,7 +1,6 @@
 import numpy as np
-import casadi as ca
 
-from src.config import N, dt, V_REF, A
+from src.config import N, V_REF, A
 
 def update_reference_point(x0, y0, current_idx, x_traj, y_traj, min_distance=5.0):
     distance_to_current_point = np.sqrt((x_traj[current_idx] - x0) ** 2 + (y_traj[current_idx] - y0) ** 2)
@@ -12,9 +11,9 @@ def update_reference_point(x0, y0, current_idx, x_traj, y_traj, min_distance=5.0
     return current_idx
 
 def get_eight_trajectory(x_init, y_init, total_points=100):
-    T = 2 * np.pi
+    t = 2 * np.pi
 
-    t_values = np.linspace(0, T, total_points)
+    t_values = np.linspace(0, t, total_points)
     x_traj = x_init + A * np.sin(t_values)
     y_traj = y_init + A * np.sin(t_values) * np.cos(t_values)
 
@@ -48,12 +47,6 @@ def get_ref_trajectory(x_traj, y_traj, theta_traj, current_idx):
         theta_ref = np.concatenate((theta_traj[current_idx:], theta_traj[:N - (len(x_traj) - current_idx)]))
     return x_ref, y_ref, theta_ref
 
-def draw_ref_trajectory(carla, world, x_ref, y_ref):
-    for i in range(N - 1):
-        start_point = carla.Location(x=x_ref[i], y=y_ref[i], z=1.0)
-        end_point = carla.Location(x=x_ref[i + 1], y=y_ref[i + 1], z=1.0)
-        world.debug.draw_line(start_point, end_point, thickness=0.1, color=carla.Color(255, 0, 0), life_time=dt * 2)
-
 def get_straight_trajectory(x_init, y_init, distance=3000, total_points=1000):
     x_traj = np.linspace(x_init + 5, x_init + distance, total_points)
     y_traj = np.full(total_points, y_init + 3)
@@ -64,7 +57,7 @@ def get_straight_trajectory(x_init, y_init, distance=3000, total_points=1000):
 
 def calculate_lateral_deviation(x, y, x_ref1, y_ref1, x_ref2, y_ref2):
     num = (y_ref2 - y_ref1) * x - (x_ref2 - x_ref1) * y + x_ref2 * y_ref1 - y_ref2 * x_ref1
-    denom = ca.sqrt((y_ref2 - y_ref1) ** 2 + (x_ref2 - x_ref1) ** 2)
+    denom = np.sqrt((y_ref2 - y_ref1) ** 2 + (x_ref2 - x_ref1) ** 2)
     if denom > 0.01:
         return num / denom
     else:
